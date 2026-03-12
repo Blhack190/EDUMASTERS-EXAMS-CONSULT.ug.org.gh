@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Master Admin Portal</title>
+    <link rel="stylesheet" href="style.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="glass-panel" style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h2 id="admin-title" style="color: #1dd1a1;">School Admin</h2>
+                <button class="btn" style="background: #ff9f43; width: auto; margin: 0; padding: 10px 15px;" onclick="adminTutorAccess()">👨‍🏫 Master Tutor Access</button>
+            </div>
+            <button class="btn btn-danger" style="width:auto; margin:0;" onclick="sessionStorage.clear(); window.location.href='index.html'">Logout</button>
+        </div>
+
+        <div class="grid">
+            <!-- COURSE MGT & TUTORS -->
+            <div class="glass-panel">
+                <h3>📚 Course Mgt & Tutor Creation</h3>
+                <button class="btn btn-danger" style="margin-bottom: 15px; background: #ff9f43;" onclick="loadDefaultCourses()">⚡ Auto-Load All UGBS/Diploma Courses</button>
+                <hr style="border-color: rgba(255,255,255,0.2); margin-bottom:15px;">
+                <input type="text" id="c_code" placeholder="Course Code (e.g. LAW101)"><input type="text" id="c_name" placeholder="Course Name"><input type="number" id="c_credits" placeholder="Credits">
+                <button class="btn btn-blue" style="margin-bottom: 15px;" onclick="createCourse()">Add Single Course</button>
+                
+                <hr style="border-color: rgba(255,255,255,0.2); margin:15px 0;">
+                <h3 style="color:#ff9f43;">👨‍🏫 Create Tutor Account</h3>
+                <input type="text" id="t_name" placeholder="Tutor Name"><input type="email" id="t_email" placeholder="Tutor Email">
+                <select id="t_group"><option value="">-- Assign to Group (Optional) --</option></select>
+                <div style="display:flex; gap:10px;"><input type="text" id="t_pass" placeholder="Password" readonly><button class="btn btn-danger" style="width:auto;" onclick="document.getElementById('t_pass').value = Math.random().toString(36).slice(-8)+'@';">Generate</button></div>
+                <button class="btn" style="background:#1dd1a1;" onclick="createTutor()">Create Tutor Account</button>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin:15px 0;">
+                <h3 style="color:#ff6b6b;">🗑️ Manage Courses</h3>
+                <div style="max-height: 150px; overflow-y: auto;"><table style="margin-top:0;"><tbody id="admin-courses"></tbody></table></div>
+            </div>
+
+            <!-- GROUPS & ASSESSMENTS -->
+            <div class="glass-panel">
+                <h3 style="color:#0984e3;">🏷️ Manage Study Groups</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;"><input type="text" id="g_name" placeholder="Group Name" style="margin:0;"><button class="btn btn-blue" style="background:#0984e3; width:auto; margin:0;" onclick="createGroup()">Create</button></div>
+                <label style="font-size:0.8rem; display:block; margin-bottom:15px;"><input type="checkbox" id="g_req_code" style="width:auto;"> Require strict Access Code for students?</label>
+                <div style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"><table style="margin-top:0;"><tbody id="admin-groups"></tbody></table></div>
+                
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="color:#1dd1a1; margin:0;">📝 Create Assessment</h3>
+                    <!-- NEW: TEST CAMERA BUTTON -->
+                    <button class="btn" style="background:#25D366; width:auto; padding:5px 10px; font-size:0.8rem;" onclick="testCamera()">📷 Test Proctor Cam</button>
+                </div>
+                <select id="a_course"><option value="">Loading Courses...</option></select>
+                <select id="a_group"><option value="GLOBAL">🌐 Global (All Groups)</option></select>
+                <select id="a_type" onchange="toggleAssType()"><option value="Exam">Exam (MCQ)</option><option value="IA">IA (Continuous)</option><option value="Try Work">Try Work (Practice)</option><option value="Assignment">Assignment (File Upload)</option></select>
+                <input type="text" id="a_title" placeholder="Title (e.g. Final Exam)"><input type="number" id="a_days" placeholder="Valid for how many days? (e.g. 7)"><input type="number" id="a_duration" placeholder="Duration in Mins (MCQ only)"><textarea id="a_desc" class="hidden" placeholder="Assignment Instructions"></textarea>
+                <button class="btn btn-blue" onclick="createAssessment()">Create Assessment</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- QUESTION SETTER -->
+            <div class="glass-panel">
+                <h3 style="color:#ffb142;">➕ Add Question to Exam/IA</h3>
+                <select id="q_exam"><option value="">Loading Exams...</option></select>
+                <textarea id="q_text" placeholder="Type the question here..."></textarea>
+                <div style="display: flex; gap: 10px;"><input type="text" id="q_a" placeholder="Option A"><input type="text" id="q_b" placeholder="Option B"></div>
+                <div style="display: flex; gap: 10px;"><input type="text" id="q_c" placeholder="Option C"><input type="text" id="q_d" placeholder="Option D"></div>
+                <select id="q_ans"><option value="">Correct Answer</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                <button class="btn" style="background:#ffb142; color:#000;" onclick="addQuestion()">Add Single Question</button>
+                
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                <h3 style="color:#ff6b6b;">🗑️ Manage Assessments (Get IDs Here!)</h3>
+                <div style="max-height: 150px; overflow-y: auto;"><table style="margin-top:0;"><tbody id="admin-manage-exams"></tbody></table></div>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                <h3 style="color:#ffb142;">⏱ Live Exam Controller</h3>
+                <div style="display: flex; gap: 10px;"><select id="activeExamsList" style="flex: 2; margin: 0;"><option value="">Loading Exams...</option></select><input type="number" id="extra_time" placeholder="+ Mins" style="flex: 1; margin: 0;"><button class="btn" style="flex: 1; margin: 0;" onclick="extendTime()">Add Time</button></div>
+            </div>
+
+            <!-- SECURITY & PROMPTS -->
+            <div class="glass-panel">
+                <h3 style="color:#ff6b6b;">📢 Broadcast Announcement</h3>
+                <textarea id="ann_text" placeholder="Type important announcement here..."></textarea>
+                <button class="btn btn-danger" onclick="postAnnouncement()">Broadcast to Students</button>
+                <div id="admin-announcements" style="max-height: 100px; overflow-y: auto; margin-top:10px;"></div>
+
+                <!-- NEW: EMERGENCY EXAM RESET (NETWORK ISSUES) -->
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                <h3 style="color:#0984e3;">🔄 Emergency Exam Reset</h3>
+                <p style="font-size:0.8rem; margin-bottom:10px;">Clear a student's attempt for free if they had network issues.</p>
+                <input type="text" id="reset_stu_index" placeholder="Student Index Number">
+                <select id="reset_exam_list"><option value="">Loading Exams...</option></select>
+                <button class="btn btn-blue" onclick="emergencyResetExam()">Clear Attempt & Allow Retake</button>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                <h3 style="color:#ff6b6b;">🔐 Security Resets</h3>
+                <div style="display: flex; gap: 10px;"><input type="email" id="reset_email" placeholder="Tutor's Email" style="margin: 0;"><input type="text" id="reset_pass" placeholder="New Password" style="margin: 0;"></div>
+                <button class="btn btn-danger" style="margin-top: 10px; margin-bottom: 15px;" onclick="resetPassword()">Reset Tutor Pass</button>
+                <input type="text" id="stu_index" placeholder="Student Index Number"><input type="email" id="new_stu_email" placeholder="New Email Address"><input type="text" id="new_stu_phone" placeholder="New Phone Number"><button class="btn" style="background:#ffb142; color:#000;" onclick="resetStudent()">Update Student Login</button>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                <h3 style="color:#1dd1a1; font-size: 1rem;">🤖 AI Prompt Generator</h3>
+                <textarea readonly style="height:60px; font-size:0.75rem; background:#222; color:#1dd1a1; margin-bottom: 5px;">"Act as a database admin. Generate a Supabase SQL insert script for 50 multiple choice questions about [TOPIC]. Table: questions (exam_id=YOUR_ID, type='mcq', question_text, option_a, option_b, option_c, option_d, correct_answer)."</textarea>
+            </div>
+        </div>
+
+        <div class="glass-panel" style="border: 2px solid #ffb142;">
+            <h3 style="color:#ffb142;">💰 Pending MoMo Payments</h3>
+            <div style="overflow-x:auto;"><table><thead><tr><th>Student</th><th>Request</th><th>Receipt</th><th>Action</th></tr></thead><tbody id="admin-payments"></tbody></table></div>
+        </div>
+
+        <div class="glass-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><h3>📊 Student Results</h3><button class="btn btn-blue" style="width:auto; padding: 10px 15px;" onclick="exportResults()">📥 Download CSV</button></div>
+            <div style="overflow-x:auto;"><table><thead><tr><th>Index No.</th><th>Course</th><th>Assessment</th><th>Score</th><th>Grade</th><th>Date</th></tr></thead><tbody id="admin-subs"></tbody></table></div>
+        </div>
+
+        <div class="grid">
+            <div class="glass-panel"><h3 style="color:#1dd1a1;">👥 All Registered Students</h3><input type="text" id="search_stu" placeholder="🔍 Search by Name or Index..." onkeyup="searchStudent()" style="margin-bottom:10px; border-color:#1dd1a1;"><div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Index</th><th>Group</th><th>Contact</th><th>Action</th></tr></thead><tbody id="admin-students"></tbody></table></div></div>
+            <div class="glass-panel"><h3 style="color:#ff9f43;">👨‍🏫 Active Tutors</h3><div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Role/Group</th><th>Action</th></tr></thead><tbody id="admin-tutors"></tbody></table></div></div>
+        </div>
+    </div>
+
+    <!-- LIVE CAMERA TEST CONTAINER (Hidden until clicked) -->
+    <div id="test-camera-box" style="display:none; position:fixed; bottom:20px; left:20px; width:150px; height:150px; border-radius:50%; overflow:hidden; border:4px solid #ffb142; z-index:9000; box-shadow: 0 10px 20px rgba(0,0,0,0.8); background:#000;">
+        <video id="test-cam" autoplay playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
+        <button style="position:absolute; top:5px; right:5px; background:red; color:white; border:none; border-radius:50%; cursor:pointer;" onclick="stopCamera()">X</button>
+    </div>
+
+    <script src="config.js"></script>
+    
+    <script>
+        const school = JSON.parse(sessionStorage.getItem('admin_school')); 
+        if(!school) window.location.href = 'index.html';
+        let allSubs = [];
+        
+        window.onload = async () => {
+            document.getElementById('admin-title').innerText = `${school.name} Admin`;
+            
+            // LOAD GROUPS
+            const { data: groups } = await supabaseClient.from('study_groups').select('*').eq('school_id', school.id);
+            const grpBody = document.getElementById('admin-groups'); grpBody.innerHTML = '';
+            if(groups) groups.forEach(g => { document.getElementById('t_group').innerHTML += `<option value="${g.id}">${g.group_name}</option>`; document.getElementById('a_group').innerHTML += `<option value="${g.id}">🎯 Target: ${g.group_name}</option>`; let lockStatus = g.requires_code ? "<span style='color:#ff6b6b;'>🔒 Locked</span>" : "<span style='color:#1dd1a1;'>🔓 Open</span>"; grpBody.innerHTML += `<tr><td><strong>${g.group_name}</strong><br><small style="color:#1dd1a1;">Code: ${g.access_code}</small> | <small>${lockStatus}</small></td><td style="display:flex; gap:5px; flex-wrap:wrap;"><button class="btn" style="background:#0984e3; color:#fff; padding:5px; width:auto;" onclick="toggleGroupLock(${g.id}, ${g.requires_code})">🔐</button><button class="btn btn-danger" style="padding:5px; width:auto;" onclick="deleteGroup(${g.id}, '${g.group_name}')">🗑️</button></td></tr>`; });
+
+            // LOAD COURSES
+            const { data: courses } = await supabaseClient.from('courses').select('*').eq('school_id', school.id);
+            if(courses) courses.forEach(c => { document.getElementById('a_course').innerHTML += `<option value="${c.id}">${c.course_code}</option>`; document.getElementById('admin-courses').innerHTML += `<tr><td><strong>${c.course_code}</strong>: ${c.course_name}</td><td><button class="btn btn-danger" style="padding:5px;" onclick="deleteCourse(${c.id})">🗑️</button></td></tr>`; });
+            
+            // LOAD EXAMS
+            const { data: exams } = await supabaseClient.from('exams').select('*, courses(course_code)');
+            if(exams) exams.forEach(e => { document.getElementById('q_exam').innerHTML += `<option value="${e.id}">[${e.exam_type}] ${e.title}</option>`; document.getElementById('activeExamsList').innerHTML += `<option value="${e.id}">${e.title} (${e.duration_minutes}m)</option>`; document.getElementById('reset_exam_list').innerHTML += `<option value="${e.id}">[${e.exam_type}] ${e.title}</option>`; document.getElementById('admin-manage-exams').innerHTML += `<tr><td><span style="color:#ffb142; font-weight:bold;">[ID: ${e.id}]</span> <strong>[${e.exam_type}]</strong> ${e.title}</td><td><button class="btn btn-danger" style="padding:5px;" onclick="deleteAssessment('exams', ${e.id})">🗑️</button></td></tr>`; });
+
+            const { data: assigs } = await supabaseClient.from('assignments').select('*, courses(course_code)');
+            if(assigs) assigs.forEach(a => { document.getElementById('admin-manage-exams').innerHTML += `<tr><td><span style="color:#ffb142; font-weight:bold;">[ID: ${a.id}]</span> <strong>[Assignment]</strong> ${a.title}</td><td><button class="btn btn-danger" style="padding:5px;" onclick="deleteAssessment('assignments', ${a.id})">🗑️</button></td></tr>`; });
+
+            // LOAD ANNOUNCEMENTS
+            const { data: anns } = await supabaseClient.from('announcements').select('*').eq('school_id', school.id).order('posted_at', { ascending: false });
+            if(anns) anns.forEach(a => document.getElementById('admin-announcements').innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.8rem;">${a.message}</span><button class="btn btn-danger" style="width:auto; padding:3px 8px;" onclick="deleteAnnouncement(${a.id})">🗑️</button></div>`);
+
+            // LOAD PENDING PAYMENTS
+            const { data: payments } = await supabaseClient.from('payments').select('*, students(name, index_number), exams(title)').eq('status', 'pending');
+            const payBody = document.getElementById('admin-payments'); payBody.innerHTML = '';
+            if(payments && payments.length > 0) payments.forEach(p => { payBody.innerHTML += `<tr><td><strong>${p.students.name}</strong><br><small>${p.students.index_number}</small></td><td>${p.payment_type.toUpperCase()}<br><small>${p.exams.title}</small></td><td><a href="${p.receipt_url}" target="_blank" style="color:#1dd1a1; font-weight:bold;">📸 View Receipt</a></td><td style="display:flex; gap:5px;"><button class="btn" style="background:#1dd1a1; color:#000; padding:5px; width:auto;" onclick="approvePayment(${p.id})">✅</button><button class="btn btn-danger" style="padding:5px; width:auto;" onclick="rejectPayment(${p.id})">❌</button></td></tr>`; });
+            else payBody.innerHTML = '<tr><td colspan="4">No pending payments.</td></tr>';
+
+            // LOAD RESULTS, TUTORS, STUDENTS
+            const { data: subs } = await supabaseClient.from('submissions').select('*, students(index_number), exams(title, courses(course_code, school_id))');
+            if(subs) subs.filter(s => s.exams.courses.school_id == school.id).forEach(s => { allSubs.push(s); document.getElementById('admin-subs').innerHTML += `<tr><td>${s.students.index_number}</td><td>${s.exams.courses.course_code}</td><td>${s.exams.title}</td><td>${s.score}/${s.max_score}</td><td><strong style="color:#1dd1a1;">${s.grade}</strong></td><td>${new Date(s.submitted_at).toLocaleDateString()}</td></tr>`; });
+
+            const dirBody = document.getElementById('admin-tutors'); dirBody.innerHTML = '';
+            const { data: tutors } = await supabaseClient.from('tutors').select('*, study_groups(group_name)').eq('school_id', school.id);
+            if(tutors) tutors.forEach(t => dirBody.innerHTML += `<tr><td><strong>${t.name}</strong><br><small>${t.email}</small></td><td>Group: ${t.study_groups ? t.study_groups.group_name : '<span style="color:#ff6b6b">Unassigned</span>'}</td><td><button class="btn btn-danger" style="padding:5px;width:auto;" onclick="revokeTutor(${t.id}, '${t.name}')">🗑️</button></td></tr>`);
+            
+            const stuBody = document.getElementById('admin-students'); stuBody.innerHTML = '';
+            const { data: students } = await supabaseClient.from('students').select('*, study_groups(group_name)').eq('school_id', school.id);
+            if(students) students.forEach(st => { let wa = st.phone_number.startsWith('0') ? '233'+st.phone_number.substring(1) : st.phone_number; stuBody.innerHTML += `<tr class="stu-row"><td><strong>${st.name}</strong><br><small>${st.academic_level}</small></td><td>${st.index_number}</td><td><strong style="color:#ffb142;">${st.study_groups ? st.study_groups.group_name : "No Group"}</strong></td><td><a href="https://wa.me/${wa}" target="_blank" class="btn" style="padding:5px;width:auto;background:#25D366;text-decoration:none;">💬</a></td><td><button class="btn btn-danger" style="padding:5px;width:auto;" onclick="revokeStudent(${st.id}, '${st.name}')">🗑️</button></td></tr>`; });
+        };
+
+        // NEW: EMERGENCY RESET & CAMERA TEST
+        async function emergencyResetExam() {
+            const idx = document.getElementById('reset_stu_index').value.trim();
+            const exId = document.getElementById('reset_exam_list').value;
+            if(!idx || !exId) return alert("Enter Index Number and select Exam.");
+            const { data: stu } = await supabaseClient.from('students').select('id').eq('index_number', idx).single();
+            if(!stu) return alert("Student not found!");
+            await supabaseClient.from('submissions').delete().eq('student_id', stu.id).eq('exam_id', exId);
+            alert("Attempt cleared! Student can now retake the exam for free."); location.reload();
+        }
+
+        async function testCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('test-cam').srcObject = stream;
+                document.getElementById('test-camera-box').style.display = 'block';
+            } catch (err) { alert("Camera access denied or no camera found!"); }
+        }
+        function stopCamera() {
+            const stream = document.getElementById('test-cam').srcObject;
+            if(stream) stream.getTracks().forEach(track => track.stop());
+            document.getElementById('test-camera-box').style.display = 'none';
+        }
+
+        // KEEP ALL OTHER ADMIN FUNCTIONS EXACTLY THE SAME...
+        function searchStudent() { let filter = document.getElementById('search_stu').value.toLowerCase(); let rows = document.getElementsByClassName('stu-row'); for(let i=0; i<rows.length; i++) { rows[i].style.display = rows[i].innerText.toLowerCase().includes(filter) ? "" : "none"; } }
+        async function approvePayment(id) { await supabaseClient.from('payments').update({ status: 'approved' }).eq('id', id); alert("Approved!"); location.reload(); }
+        async function rejectPayment(id) { if(confirm("Reject receipt?")) { await supabaseClient.from('payments').delete().eq('id', id); location.reload(); } }
+        async function loadDefaultCourses() { const c = [{ school_id: school.id, course_code: 'UGBS203', course_name: 'Commercial Law', credit_hours: 3 }, { school_id: school.id, course_code: 'LAW301', course_name: 'Constitutional Law', credit_hours: 3 }, { school_id: school.id, course_code: 'ECO101', course_name: 'Economics', credit_hours: 3 }, { school_id: school.id, course_code: 'ACC101', course_name: 'Accounting 1', credit_hours: 3 }, { school_id: school.id, course_code: 'MGT101', course_name: 'Prin. of Management', credit_hours: 3 }, { school_id: school.id, course_code: 'PAD101', course_name: 'Public Setting', credit_hours: 3 }, { school_id: school.id, course_code: 'OMGT201', course_name: 'Office Management', credit_hours: 3 }, { school_id: school.id, course_code: 'PAD201', course_name: 'Public Admin', credit_hours: 3 }, { school_id: school.id, course_code: 'FIN201', course_name: 'Public Finance', credit_hours: 3 }, { school_id: school.id, course_code: 'ENV201', course_name: 'Environmental Mgt', credit_hours: 3 }]; await supabaseClient.from('courses').insert(c); alert("Loaded!"); location.reload(); }
+        async function createCourse() { await supabaseClient.from('courses').insert([{ school_id: school.id, course_code: document.getElementById('c_code').value.toUpperCase(), course_name: document.getElementById('c_name').value, credit_hours: parseInt(document.getElementById('c_credits').value) }]); location.reload(); }
+        async function deleteCourse(id) { if(confirm("🚨 Delete course?")) { await supabaseClient.from('courses').delete().eq('id', id); location.reload(); } }
+        async function createGroup() { const n = document.getElementById('g_name').value.trim(); if(!n) return; const req = document.getElementById('g_req_code').checked; const newCode = Math.random().toString(36).substring(2, 8).toUpperCase(); await supabaseClient.from('study_groups').insert([{ school_id: school.id, group_name: n, access_code: newCode, requires_code: req }]); alert(`Created! Code: ${newCode}`); location.reload(); }
+        async function deleteGroup(id, name) { if(confirm(`Delete '${name}'?`)) { await supabaseClient.from('study_groups').delete().eq('id', id); location.reload(); } }
+        async function toggleGroupLock(id, cur) { await supabaseClient.from('study_groups').update({ requires_code: !cur }).eq('id', id); location.reload(); }
+        async function createTutor() { const n = document.getElementById('t_name').value, e = document.getElementById('t_email').value, p = document.getElementById('t_pass').value, g = document.getElementById('t_group').value; if(!n||!e||!p) return; let pl = { school_id: school.id, name: n, email: e, password: p, is_first_login: true }; if(g) pl.group_id = g; await supabaseClient.from('tutors').insert([pl]); alert(`Tutor Created!`); location.reload(); }
+        async function adminTutorAccess() { let { data: master } = await supabaseClient.from('tutors').select('*').eq('email', `admin@${school.id}.com`).single(); if(!master) { const { data: n } = await supabaseClient.from('tutors').insert([{ school_id: school.id, name: 'Admin Master', email: `admin@${school.id}.com`, password: 'bypass', is_first_login: false }]).select().single(); master = n; } sessionStorage.setItem('tutor', JSON.stringify(master)); window.location.href = 'tutor.html'; }
+        function toggleAssType() { const t = document.getElementById('a_type').value; document.getElementById('a_duration').classList.toggle('hidden', t==='Assignment'); document.getElementById('a_desc').classList.toggle('hidden', t!=='Assignment'); }
+        async function createAssessment() { const t = document.getElementById('a_type').value; const selectedGroup = document.getElementById('a_group').value; const finalGroupId = selectedGroup === "GLOBAL" ? null : selectedGroup; const daysValid = parseInt(document.getElementById('a_days').value) || 30; let expiryDate = new Date(); expiryDate.setDate(expiryDate.getDate() + daysValid); if(t === 'Assignment') { await supabaseClient.from('assignments').insert([{ course_id: document.getElementById('a_course').value, title: document.getElementById('a_title').value, description: document.getElementById('a_desc').value, due_date: expiryDate.toISOString(), expires_at: expiryDate.toISOString(), group_id: finalGroupId }]); } else { await supabaseClient.from('exams').insert([{ course_id: document.getElementById('a_course').value, title: document.getElementById('a_title').value, duration_minutes: document.getElementById('a_duration').value, exam_type: t, expires_at: expiryDate.toISOString(), group_id: finalGroupId }]); } alert("Created!"); location.reload(); }
+        async function deleteAssessment(table, id) { if(confirm("Permanently delete?")) { await supabaseClient.from(table).delete().eq('id', id); location.reload(); } }
+        async function addQuestion() { await supabaseClient.from('questions').insert([{ exam_id: document.getElementById('q_exam').value, type: 'mcq', question_text: document.getElementById('q_text').value, option_a: document.getElementById('q_a').value, option_b: document.getElementById('q_b').value, option_c: document.getElementById('q_c').value, option_d: document.getElementById('q_d').value, correct_answer: document.getElementById('q_ans').value }]); alert("Added!"); document.getElementById('q_text').value = ''; }
+        async function postAnnouncement() { await supabaseClient.from('announcements').insert([{ school_id: school.id, message: document.getElementById('ann_text').value.trim() }]); location.reload(); }
+        async function deleteAnnouncement(id) { await supabaseClient.from('announcements').delete().eq('id', id); location.reload(); }
+        async function resetPassword() { await supabaseClient.from('tutors').update({ password: document.getElementById('reset_pass').value, is_first_login: true }).eq('email', document.getElementById('reset_email').value); alert("Reset!"); }
+        async function resetStudent() { const idx = document.getElementById('stu_index').value.trim(), em = document.getElementById('new_stu_email').value.trim(), ph = document.getElementById('new_stu_phone').value.trim(); if(!idx||!em||!ph) return; await supabaseClient.from('students').update({ email: em, phone_number: ph }).eq('index_number', idx); alert("Updated!"); location.reload(); }
+        async function unenrollStudent() { const idx = document.getElementById('unenroll_index').value.trim(); const courseId = document.getElementById('unenroll_course').value; if(!idx || !courseId) return; const { data: stu } = await supabaseClient.from('students').select('id').eq('index_number', idx).single(); if(!stu) return alert("Not found!"); await supabaseClient.from('student_courses').delete().eq('student_id', stu.id).eq('course_id', courseId); alert("Removed!"); location.reload(); }
+        async function extendTime() { const e = document.getElementById('activeExamsList').value, t = parseInt(document.getElementById('extra_time').value); const { data: c } = await supabaseClient.from('exams').select('duration_minutes').eq('id', e).single(); await supabaseClient.from('exams').update({ duration_minutes: c.duration_minutes + t }).eq('id', e); alert(`Time Added!`); location.reload(); }
+        async function revokeStudent(id, n) { if(confirm(`Delete ${n}?`)) { await supabaseClient.from('students').delete().eq('id', id); location.reload(); } }
+        async function revokeTutor(id, n) { if(confirm(`Delete ${n}?`)) { await supabaseClient.from('tutors').delete().eq('id', id); location.reload(); } }
+        function exportResults() { let csv = "Index,Course,Assessment,Score,Grade\n"; allSubs.forEach(s => csv += `${s.students.index_number},${s.exams.courses.course_code},${s.exams.title},${s.score},${s.grade}\n`); const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `Results.csv`; a.click(); }
+    </script>
+</body>
+</html>

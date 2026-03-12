@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About The Founder - Quist Technologies</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .ad-sidebar { display: none !important; }
+        body { padding-left: 0 !important; }
+
+        .founder-img-wrapper { margin-top: 20px; margin-bottom: 20px; display: flex; justify-content: center; }
+        .founder-img { width: 180px; height: 220px; object-fit: cover; border-radius: 15px; border: 4px solid #ffb142; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; }
+        .founder-img:hover { transform: scale(1.05); border-color: #1dd1a1; }
+        
+        /* Elite Sharkers Form Styling */
+        .elite-form-container { background: rgba(0,0,0,0.6); padding: 40px; border-radius: 20px; border: 2px solid #1dd1a1; margin-top: 40px; box-shadow: 0 15px 40px rgba(29, 209, 161, 0.2); }
+        .elite-form-container input, .elite-form-container select { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+        .elite-form-container input:focus, .elite-form-container select:focus { border-color: #1dd1a1; }
+    </style>
+</head>
+<body>
+
+    <div class="brand-header">
+        <img src="logo 2.png" class="ug-logo" alt="UG Logo">
+        <h1>EduMasters Exams Consult</h1>
+    </div>
+
+    <div class="container" style="max-width: 1000px; z-index: 10;">
+        
+        <!-- HERO INTRODUCTION -->
+        <div class="about-hero">
+            <h1 class="about-name">Charles Albert Quist</h1>
+            <div class="about-title">Founder & CEO, Quist Technologies</div>
+            
+            <div class="founder-img-wrapper">
+                <img src="bday.jpg" alt="Charles Albert Quist" class="founder-img">
+            </div>
+
+            <p style="font-size: 1.1rem; line-height: 1.8; color: #fff; max-width: 800px; margin: 0 auto;">
+                A technology entrepreneur, digital strategist, and IT specialist. Charles is passionate about building intelligent digital systems that empower businesses to scale and students to excel academically.
+            </p>
+        </div>
+
+        <!-- TWO COLUMN GRID FOR CONTENT -->
+        <div class="grid">
+            <div class="about-card sec-edu">
+                <h3>Education & Certifications</h3>
+                <p>Charles pursued academic studies at the <strong>University of Ghana (Legon)</strong> with a background in Public Administration. He is currently advancing his education at <strong>Brigham Young University (BYU)</strong>.</p>
+                <p>He holds elite technical credentials including:</p>
+                <ul>
+                    <li>2x Oracle Cloud Infrastructure (OCI) Certified</li>
+                    <li>Oracle Cloud Infrastructure AI Certified</li>
+                </ul>
+            </div>
+
+            <div class="about-card sec-tech">
+                <h3>Quist Technologies</h3>
+                <p>As Founder and CEO, Charles leads a modern digital solutions company delivering premium, future-ready systems for enterprises. Services include:</p>
+                <ul>
+                    <li>Website & E-Commerce Development</li>
+                    <li>Cloud Solutions & Digital Systems</li>
+                    <li>Technology Consulting</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 🌟 NEW: ELITE SHARKERS DIRECT WHATSAPP APPLICATION FORM -->
+        <div class="elite-form-container">
+            <h2 style="color: #1dd1a1; text-align: center; font-size: 2rem; margin-bottom: 10px;">🦈 Join The Elite Sharkers</h2>
+            <p style="text-align: center; margin-bottom: 25px; color: #ccc;">Apply for our Premium Study Group. Fill the form below, and it will instantly send your application directly to the Admin on WhatsApp!</p>
+            
+            <form id="eliteForm" onsubmit="submitEliteForm(event)">
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <input type="text" id="elite_name" placeholder="Full Name" required>
+                    <input type="text" id="elite_index" placeholder="Index Number" required>
+                </div>
+                
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <select id="elite_level" required>
+                        <option value="">-- Select Academic Level --</option>
+                        <option value="Diploma 1">Diploma 1</option>
+                        <option value="Diploma 2">Diploma 2</option>
+                        <option value="Level 100">Level 100</option>
+                        <option value="Level 200">Level 200</option>
+                        <option value="Level 300">Level 300</option>
+                        <option value="Level 400">Level 400</option>
+                    </select>
+                    <select id="elite_mode" required>
+                        <option value="">-- Select Study Mode --</option>
+                        <option value="Strictly Online">Strictly Online</option>
+                        <option value="Hybrid (Online + Face-to-Face)">Hybrid (Online + Face-to-Face)</option>
+                    </select>
+                </div>
+                
+                <input type="text" id="elite_courses" placeholder="Which specific courses do you need help with? (e.g. Commercial Law, Accounting)" required style="margin-top: 15px;">
+
+                <button type="submit" class="btn" style="background: #25D366; color: #fff; font-size: 1.1rem; padding: 15px; margin-top: 20px;">
+                    💬 Submit Application via WhatsApp
+                </button>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; margin-bottom: 100px;">
+            <button class="btn btn-blue" style="width: auto; padding: 15px 40px; font-size: 1.1rem;" onclick="window.location.href='index.html'">🔙 Return to Login</button>
+        </div>
+
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // WhatsApp Application Generator Logic
+        function submitEliteForm(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('elite_name').value.trim();
+            const index = document.getElementById('elite_index').value.trim();
+            const level = document.getElementById('elite_level').value;
+            const mode = document.getElementById('elite_mode').value;
+            const courses = document.getElementById('elite_courses').value.trim();
+
+            // Format the message for WhatsApp
+            let waMessage = `🦈 *NEW ELITE SHARKERS APPLICATION* 🦈%0A%0A`;
+            waMessage += `*Name:* ${name}%0A`;
+            waMessage += `*Index Number:* ${index}%0A`;
+            waMessage += `*Level:* ${level}%0A`;
+            waMessage += `*Study Mode:* ${mode}%0A`;
+            waMessage += `*Target Courses:* ${courses}%0A%0A`;
+            waMessage += `_I am ready to join the premium study group and await my Access Code!_`;
+
+            // Open WhatsApp with the pre-filled message sent to 0592747794
+            const waLink = `https://wa.me/233592747794?text=${waMessage}`;
+            window.open(waLink, '_blank');
+        }
+    </script>
+</body>
+</html>

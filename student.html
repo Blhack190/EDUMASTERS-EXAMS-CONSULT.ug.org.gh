@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Student Portal</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body>
+    <div class="reader-modal" id="readerModal"><div class="reader-header"><h3 id="reader-title">Reading</h3><button class="btn btn-danger" style="width:auto; padding:5px 15px; margin:0;" onclick="document.getElementById('readerModal').classList.remove('active'); document.getElementById('reader-frame').src='';">Close X</button></div><div class="reader-content"><iframe id="reader-frame" src=""></iframe></div></div>
+    
+    <!-- 💸 MANUAL MOMO MODAL -->
+    <div class="modal-overlay" id="momoModal">
+        <div class="momo-box" style="background: linear-gradient(135deg, #0984e3, #6c5ce7);">
+            <h2>📱 Manual MoMo Verification</h2>
+            <p id="momo-desc" style="font-size:0.9rem; margin-bottom:15px;"></p>
+            <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:10px; margin-bottom:15px; text-align:left;">
+                <strong>Step 1:</strong> Send exactly <strong>GHS 5.00</strong> to:<br>
+                🟢 <strong>MTN MoMo:</strong> 0592747794<br>
+                👤 <strong>Name:</strong> Charles Quist
+            </div>
+            <div style="text-align:left; font-size:0.85rem; margin-bottom:5px;"><strong>Step 2:</strong> Upload Screenshot of Payment SMS</div>
+            <input type="file" id="receipt_file" accept="image/*" style="background:#fff; color:#000; padding:10px; border-radius:8px; margin-bottom:15px; width:100%;">
+            <button class="btn" style="background:#1dd1a1; color:#000;" onclick="submitReceipt()">Submit for Approval</button>
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="document.getElementById('momoModal').classList.remove('active');">Cancel</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="glass-panel no-print" style="display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:15px;"><img src="logo1.png" style="width:50px;"><h2 id="welcome-text">Welcome</h2></div><button class="btn btn-danger" style="width:auto;" onclick="sessionStorage.clear(); window.location.href='index.html'">Logout</button></div>
+        <div class="glass-panel no-print" id="announcement-section" style="display:none; background: rgba(255, 107, 107, 0.15); border-left: 5px solid #ff6b6b;"><h3 style="color:#ff6b6b; margin-bottom:10px;">📢 Announcements</h3><div id="announcement-list"></div></div>
+        
+        <div class="grid no-print">
+            <div class="glass-panel"><h3>📚 Course Registration</h3><select id="available-courses"><option value="">Loading...</option></select><button class="btn btn-blue" onclick="enrollCourse()">Enroll</button><div id="my-courses" style="margin-top: 15px; color: #1dd1a1;"></div></div>
+            <div class="glass-panel"><h3 style="color:#1dd1a1;">📝 Exams & IAs</h3><div id="active-exams"></div></div>
+        </div>
+
+        <div class="grid no-print">
+            <div class="glass-panel"><h3 style="color:#ffb142;">📁 Pending Assignments</h3><div id="active-assignments"></div></div>
+            <div class="glass-panel"><h3>📚 Course Materials</h3><div id="course-materials"></div></div>
+        </div>
+
+        <div class="glass-panel no-print"><h3>💸 Premium Actions</h3><table><thead><tr><th>Course</th><th>Score</th><th>Action</th></tr></thead><tbody id="completed-actions"></tbody></table></div>
+        
+        <div class="glass-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div><h2 id="school-name">Transcript</h2><h4 id="student-details" style="color: #ccc;"></h4></div><div style="text-align: right;"><h3 style="margin: 0;">CGPA</h3><h1 id="cgpa" style="font-size: 3rem; color: #1dd1a1; margin: 0;">0.00</h1></div></div>
+            <table><thead><tr><th>Course</th><th>Exam</th><th>Credits</th><th>Score</th><th>Grade</th><th>Points</th></tr></thead><tbody id="transcript-body"></tbody></table>
+            <button class="btn btn-blue no-print" style="margin-top: 20px;" onclick="window.print()">🖨️ Print Transcript</button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const student = JSON.parse(sessionStorage.getItem('student')); if(!student) window.location.href = 'index.html';
+        let enrolledCourseIds = []; let pendingAction = null;
+
+        window.onload = async () => {
+            document.getElementById('welcome-text').innerText = student.name;
+            const { data: sch } = await supabaseClient.from('schools').select('name').eq('id', student.school_id).single(); document.getElementById('school-name').innerText = sch.name;
+            let groupLabel = "No Group Assigned"; if(student.group_id) { const { data: grp } = await supabaseClient.from('study_groups').select('group_name').eq('id', student.group_id).single(); if(grp) groupLabel = grp.group_name; }
+            document.getElementById('student-details').innerText = `${student.index_number} | ${student.academic_level} | ${groupLabel}`;
+
+            const { data: anns } = await supabaseClient.from('announcements').select('*').eq('school_id', student.school_id).order('posted_at', { ascending: false });
+            if(anns && anns.length > 0) { document.getElementById('announcement-section').style.display = 'block'; anns.forEach(a => document.getElementById('announcement-list').innerHTML += `<div class="ann-item" style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.1);"><strong>${new Date(a.posted_at).toLocaleDateString()}</strong>: ${a.message}</div>`); }
+
+            const { data: myCourses } = await supabaseClient.from('student_courses').select('course_id, courses(course_code)').eq('student_id', student.id);
+            enrolledCourseIds = myCourses ? myCourses.map(c => c.course_id) : []; document.getElementById('my-courses').innerHTML = myCourses ? "<strong>Registered:</strong><br>" + myCourses.map(c => `✔️ ${c.courses.course_code}`).join('<br>') : "";
+            const { data: allCourses } = await supabaseClient.from('courses').select('*').eq('school_id', student.school_id);
+            const select = document.getElementById('available-courses'); if(allCourses) allCourses.forEach(c => { if(!enrolledCourseIds.includes(c.id)) select.innerHTML += `<option value="${c.id}">${c.course_code} - ${c.course_name}</option>`; });
+
+            const now = new Date();
+            const { data: mySubmissions } = await supabaseClient.from('submissions').select('exam_id').eq('student_id', student.id);
+            let takenExamIds = mySubmissions ? mySubmissions.map(sub => sub.exam_id) : [];
+
+            const { data: exams } = await supabaseClient.from('exams').select('*, courses(*)').eq('is_active', true);
+            const activeDiv = document.getElementById('active-exams'); activeDiv.innerHTML = '';
+            if(exams) exams.filter(e => enrolledCourseIds.includes(e.course_id) && (e.group_id === null || e.group_id == student.group_id) && (!e.expires_at || new Date(e.expires_at) > now)).forEach(ex => {
+                if(takenExamIds.includes(ex.id)) { activeDiv.innerHTML += `<div class="card" style="border-color: #ff6b6b;"><h4 style="color:#ff6b6b;">[${ex.exam_type}] ${ex.courses.course_code}</h4><button class="btn" style="background:#444;" disabled>🔒 Attempt Completed</button></div>`; } 
+                else { activeDiv.innerHTML += `<div class="card"><h4 style="color:#1dd1a1;">[${ex.exam_type}] ${ex.courses.course_code}</h4><button class="btn" onclick="startExam(${ex.id}, ${ex.duration_minutes})">Start</button></div>`; }
+            });
+
+            const { data: assigs } = await supabaseClient.from('assignments').select('*, courses(course_code)');
+            const assDiv = document.getElementById('active-assignments'); assDiv.innerHTML = '';
+            if(assigs) assigs.filter(a => enrolledCourseIds.includes(a.course_id) && (a.group_id === null || a.group_id == student.group_id) && (!a.expires_at || new Date(a.expires_at) > now)).forEach(a => assDiv.innerHTML += `<div class="card"><h4>${a.courses.course_code} - ${a.title}</h4><input type="file" id="file_${a.id}"><button class="btn" style="background:#ffb142; color:#000; margin-top:5px;" onclick="uploadAssignment(${a.id})">Upload</button></div>`);
+
+            // NEW: STRICT MATERIAL FILTERING
+            const { data: mats } = await supabaseClient.from('materials').select('*, courses(course_code), tutors(name)');
+            const matDiv = document.getElementById('course-materials'); matDiv.innerHTML = '';
+            if(mats) mats.filter(m => enrolledCourseIds.includes(m.course_id) && (m.group_id === null || m.group_id == student.group_id)).forEach(m => { let embed = m.file_link.replace('/view', '/preview'); matDiv.innerHTML += `<div class="card"><strong style="color:#ff9f43;">${m.courses.course_code}</strong>: ${m.title}<br><small>By: ${m.tutors ? m.tutors.name : 'Admin'}</small><br><button class="btn" style="background:#1dd1a1; margin-top:10px;" onclick="document.getElementById('reader-title').innerText='${m.title}'; document.getElementById('reader-frame').src='${embed}'; document.getElementById('readerModal').classList.add('active');">📖 Read Site</button></div>`; });
+
+            const { data: payments } = await supabaseClient.from('payments').select('*').eq('student_id', student.id);
+            const { data: subs } = await supabaseClient.from('submissions').select('*, exams(id, title, courses(course_code, credit_hours))').eq('student_id', student.id);
+            let tPts = 0, tCreds = 0;
+            if(subs) subs.forEach(s => {
+                tCreds += s.exams.courses.credit_hours; tPts += (s.gpa_points * s.exams.courses.credit_hours);
+                document.getElementById('transcript-body').innerHTML += `<tr><td>${s.exams.courses.course_code}</td><td>${s.exams.title}</td><td>${s.exams.courses.credit_hours}</td><td>${s.score}/${s.max_score}</td><td><strong style="color:#1dd1a1;">${s.grade}</strong></td><td>${s.gpa_points}</td></tr>`;
+                
+                let dlPay = payments ? payments.find(p => p.exam_id === s.exams.id && p.payment_type === 'download') : null;
+                let rtPay = payments ? payments.find(p => p.exam_id === s.exams.id && p.payment_type === 'retake') : null;
+
+                let dlBtn = `<button class="btn" style="background:#ffb142; color:#000; padding:8px;" onclick="openMomo('download', ${s.exams.id})">Pay 5 GHS to DL</button>`;
+                if(dlPay && dlPay.status === 'pending') dlBtn = `<button class="btn" style="background:#888; padding:8px;" disabled>⏳ Pending</button>`;
+                if(dlPay && dlPay.status === 'approved') dlBtn = `<button class="btn" style="background:#1dd1a1; color:#000; padding:8px;" onclick="downloadQuestions(${s.exams.id}, '${s.exams.title}')">📥 DL Qs</button>`;
+
+                let rtBtn = `<button class="btn" style="background:#ff6b6b; padding:8px;" onclick="openMomo('retake', ${s.exams.id})">Pay 5 GHS to Retake</button>`;
+                if(rtPay && rtPay.status === 'pending') rtBtn = `<button class="btn" style="background:#888; padding:8px;" disabled>⏳ Pending</button>`;
+                if(rtPay && rtPay.status === 'approved') rtBtn = `<button class="btn" style="background:#0984e3; padding:8px;" onclick="executeRetake(${s.exams.id}, ${rtPay.id}, '${s.exams.title}')">🔄 Retake</button>`;
+
+                document.getElementById('completed-actions').innerHTML += `<tr><td>${s.exams.courses.course_code}</td><td>${s.score}/${s.max_score}</td><td style="display:flex; gap:5px; flex-wrap:wrap;">${dlBtn}${rtBtn}</td></tr>`;
+            });
+            if(tCreds > 0) document.getElementById('cgpa').innerText = (tPts / tCreds).toFixed(2);
+        };
+
+        // UI & DB ACTIONS
+        async function enrollCourse() { await supabaseClient.from('student_courses').insert([{ student_id: student.id, course_id: document.getElementById('available-courses').value }]); location.reload(); }
+        function startExam(id, dur) { sessionStorage.setItem('currentExam', JSON.stringify({ id: id, duration: dur })); window.location.href = 'exam.html'; }
+        async function uploadAssignment(aId) { const file = document.getElementById(`file_${aId}`).files[0]; if(!file) return alert("Select a file!"); const fileName = `${student.index_number}_A${aId}_${Date.now()}.${file.name.split('.').pop()}`; const { error } = await supabaseClient.storage.from('assignments').upload(fileName, file); if(error) return alert("Upload failed."); const url = supabaseClient.storage.from('assignments').getPublicUrl(fileName).data.publicUrl; await supabaseClient.from('assignment_submissions').insert([{ assignment_id: aId, student_id: student.id, file_url: url }]); alert("Submitted!"); location.reload(); }
+        function openMomo(type, id) { pendingAction = { type: type, examId: id }; document.getElementById('momo-desc').innerText = type === 'download' ? "Request: Download Past Questions." : "Request: Clear Attempt & Retake Exam."; document.getElementById('momoModal').classList.add('active'); }
+        
+        async function submitReceipt() {
+            const file = document.getElementById('receipt_file').files[0]; if(!file) return alert("Upload receipt!");
+            const fileName = `Receipt_${student.index_number}_${Date.now()}.${file.name.split('.').pop()}`;
+            const { error } = await supabaseClient.storage.from('receipts').upload(fileName, file);
+            if(error) return alert("Upload failed.");
+            const url = supabaseClient.storage.from('receipts').getPublicUrl(fileName).data.publicUrl;
+            await supabaseClient.from('payments').insert([{ student_id: student.id, exam_id: pendingAction.examId, payment_type: pendingAction.type, amount: 5.00, receipt_url: url, status: 'pending' }]);
+            alert("Receipt submitted! Admin will verify shortly."); location.reload();
+        }
+
+        // GENERATE RECEIPTS
+        function generateReceipt(actionName, examTitle) {
+            let r = `======================================\n      EDUMASTERS EXAMS CONSULT\n      OFFICIAL PAYMENT RECEIPT\n======================================\nStudent Name : ${student.name}\nIndex Number : ${student.index_number}\nDate         : ${new Date().toLocaleString()}\n--------------------------------------\nService Paid : ${actionName}\nAssessment   : ${examTitle}\nAmount Paid  : GHS 5.00\nStatus       : APPROVED\n======================================\nPowered by Quist Technologies\n`;
+            const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([r], { type: 'text/plain' })); a.download = `Receipt_${Date.now()}.txt`; a.click();
+        }
+        async function downloadQuestions(examId, title) { generateReceipt("Download Past Questions", title); const { data: q } = await supabaseClient.from('questions').select('*').eq('exam_id', examId); let txt = "EDUMASTERS PAST QUESTIONS\n=========================\n\n"; q.forEach((x,i) => txt += `${i+1}. ${x.question_text}\nA) ${x.option_a}\nB) ${x.option_b}\nC) ${x.option_c}\nD) ${x.option_d}\nAnswer: ${x.correct_answer}\n\n`); const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([txt])); a.download = 'Past_Questions.txt'; a.click(); }
+        async function executeRetake(examId, paymentId, title) { generateReceipt("Exam Retake Unlock", title); await supabaseClient.from('submissions').delete().eq('student_id', student.id).eq('exam_id', examId); await supabaseClient.from('payments').delete().eq('id', paymentId); alert("Old attempt cleared! You can now Retake."); location.reload(); }
+    </script>
+</body>
+</html>

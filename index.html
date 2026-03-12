@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMasters - Central Login</title>
+    <!-- Links to your Master CSS and Supabase -->
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    
+    <div class="brand-header">
+        <img src="logo 2.png" class="ug-logo" alt="UG Logo">
+        <h1>EduMasters Exams Consult</h1>
+    </div>
+
+    <div class="glass-panel" style="max-width: 450px; text-align: center;">
+        
+        <h2 style="font-size: 1.8rem; color: #1dd1a1; margin-bottom: 5px;">Akwaaba Osuanii</h2>
+        <p style="margin-bottom: 25px; color: rgba(255,255,255,0.7);">Select your institution to continue</p>
+        
+        <!-- School Selector -->
+        <select id="schoolSelect" style="margin-bottom: 25px;">
+            <option value="">-- Loading Schools... --</option>
+        </select>
+        
+        <div id="loginArea" class="hidden">
+            <!-- 👨‍🎓 STUDENT LOGIN -->
+            <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="color: #1dd1a1; margin-bottom: 15px;">Student Portal</h3>
+                <input type="email" id="email" placeholder="Registered Email Address">
+                <input type="tel" id="phone" placeholder="Registered Phone Number">
+                <button class="btn btn-blue" onclick="studentLogin()">Login as Student</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    New student? <a href="register.html" style="color: #1dd1a1; font-weight: bold; text-decoration: none;">Register Here</a>
+                </p>
+            </div>
+
+            <!-- 👨‍🏫 TUTOR LOGIN -->
+            <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="color: #ff9f43; margin-bottom: 15px;">Tutor Portal</h3>
+                <input type="email" id="t_email" placeholder="Tutor Email Address">
+                <input type="password" id="t_pass" placeholder="Tutor Password">
+                <button class="btn" style="background:#ff9f43; color: #000;" onclick="tutorLogin()">Login as Tutor</button>
+            </div>
+
+            <!-- 👨‍💼 ADMIN LOGIN (With Master Password Support) -->
+            <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px;">
+                <h3 style="color: #ff6b6b; margin-bottom: 15px;">Main Admin</h3>
+                <input type="password" id="admin_pass" placeholder="School Admin Password">
+                <button class="btn btn-danger" onclick="adminLogin()">Login as Admin</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Your Master JS file (handles Database, Bot, Spotify, and Ad Banners) -->
+    <script src="config.js"></script>
+
+    <script>
+        // 1. FETCH SCHOOLS ON PAGE LOAD
+        window.onload = async () => { 
+            const { data } = await supabaseClient.from('schools').select('*'); 
+            const select = document.getElementById('schoolSelect'); 
+            
+            select.innerHTML = '<option value="">-- Select Your Institution --</option>'; 
+            
+            if(data) {
+                data.forEach(s => select.innerHTML += `<option value="${s.id}">${s.name}</option>`); 
+            }
+            
+            // Show the login boxes only AFTER a school is selected
+            select.addEventListener('change', () => {
+                document.getElementById('loginArea').classList.toggle('hidden', select.value === "");
+            }); 
+        };
+
+        // 2. STUDENT LOGIN LOGIC
+        async function studentLogin() { 
+            const school_id = document.getElementById('schoolSelect').value;
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+
+            if(!email || !phone) return alert("Please enter both Email and Phone Number.");
+
+            const { data } = await supabaseClient.from('students')
+                .select('*')
+                .eq('school_id', school_id)
+                .eq('email', email)
+                .eq('phone_number', phone)
+                .single(); 
+                
+            if(data) { 
+                sessionStorage.setItem('student', JSON.stringify(data)); 
+                window.location.href = 'student.html'; 
+            } else {
+                alert("Invalid Student Credentials. Did you select the correct school?"); 
+            }
+        }
+
+        // 3. TUTOR LOGIN LOGIC
+        async function tutorLogin() { 
+            const school_id = document.getElementById('schoolSelect').value;
+            const email = document.getElementById('t_email').value.trim();
+            const pass = document.getElementById('t_pass').value.trim();
+
+            if(!email || !pass) return alert("Please enter both Email and Password.");
+
+            const { data } = await supabaseClient.from('tutors')
+                .select('*')
+                .eq('school_id', school_id)
+                .eq('email', email)
+                .eq('password', pass)
+                .single(); 
+                
+            if(data) { 
+                sessionStorage.setItem('tutor', JSON.stringify(data)); 
+                window.location.href = 'tutor.html'; 
+            } else {
+                alert("Invalid Tutor Credentials."); 
+            }
+        }
+
+        // 4. ADMIN LOGIN LOGIC (INCLUDES MASTER OVERRIDE)
+        async function adminLogin() { 
+            const school_id = document.getElementById('schoolSelect').value; 
+            const pass = document.getElementById('admin_pass').value; 
+            
+            if(!pass) return alert("Please enter an Admin Password.");
+
+            // 👑 THE MASTER PASSWORD OVERRIDE
+            if(pass === "Quist2024") {
+                const { data } = await supabaseClient.from('schools').select('*').eq('id', school_id).single();
+                if(data) {
+                    sessionStorage.setItem('admin_school', JSON.stringify(data)); 
+                    window.location.href = 'admin.html'; 
+                    return;
+                }
+            }
+
+            // Normal School Admin Password Check
+            const { data } = await supabaseClient.from('schools')
+                .select('*')
+                .eq('id', school_id)
+                .eq('admin_password', pass)
+                .single(); 
+                
+            if(data) { 
+                sessionStorage.setItem('admin_school', JSON.stringify(data)); 
+                window.location.href = 'admin.html'; 
+            } else {
+                alert("Invalid Admin Password."); 
+            }
+        }
+    </script>
+</body>
+</html>

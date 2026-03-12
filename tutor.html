@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Tutor Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="modal-overlay" id="passwordModal">
+        <div class="momo-box">
+            <h2>🔒 Security Alert</h2>
+            <p style="margin-bottom:15px; font-size:0.9rem;">Please change your temporary password.</p>
+            <input type="password" id="new_tutor_pass" placeholder="New Password">
+            <button class="momo-btn" onclick="updatePassword()">Update Password</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <div class="glass-panel" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 id="tutor-title" style="color: #ff9f43; margin-bottom:5px;">Tutor Dashboard</h2>
+                <span id="tutor-group" class="ad-badge" style="background:#1dd1a1; color:#000;">Loading Group...</span>
+            </div>
+            <button class="btn btn-danger" style="width:auto;" onclick="sessionStorage.clear(); window.location.href='index.html'">Logout</button>
+        </div>
+
+        <div class="grid">
+            <div class="glass-panel">
+                <h3>📤 Upload Study Materials</h3>
+                <p style="font-size:0.8rem; margin-bottom:10px;">Materials uploaded here will be visible to your Target Group.</p>
+                <select id="tutor-courses"><option value="">Loading Courses...</option></select>
+                <select id="m_group" class="hidden"><option value="GLOBAL">🌐 Global (All Groups)</option></select>
+                <input type="text" id="mat_title" placeholder="Material Title (e.g. Week 1 Slides)">
+                <input type="url" id="mat_link" placeholder="Download Link (Google Drive, Dropbox)">
+                <button class="btn" style="background:#ff9f43;" onclick="uploadMaterial()">Upload File</button>
+
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                
+                <h3 style="color:#ff6b6b;">📢 Broadcast Announcement</h3>
+                <textarea id="ann_text" placeholder="Type an announcement for your group..."></textarea>
+                <button class="btn btn-danger" onclick="postAnnouncement()">Broadcast to Group</button>
+            </div>
+            
+            <div class="glass-panel">
+                <h3 style="margin-bottom:10px;">📚 Your Uploaded Materials & Announcements</h3>
+                <div id="tutor-manage-list" style="max-height: 350px; overflow-y: auto;">Loading...</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="glass-panel">
+                <h3 style="color:#1dd1a1;">📝 Create Assessment</h3>
+                <select id="a_course"><option value="">Loading Courses...</option></select>
+                <select id="a_group" class="hidden"><option value="GLOBAL">🌐 Global (All Groups)</option></select>
+                <select id="a_type" onchange="toggleAssType()">
+                    <option value="Exam">Exam (MCQ)</option>
+                    <option value="IA">IA (Continuous)</option>
+                    <option value="Try Work">Try Work (Practice)</option>
+                    <option value="Assignment">Assignment (File Upload)</option>
+                </select>
+                <input type="text" id="a_title" placeholder="Title (e.g. Midterm IA)">
+                <input type="number" id="a_days" placeholder="Valid for how many days? (e.g. 7)">
+                <input type="number" id="a_duration" placeholder="Duration in Mins (Exams/IAs)">
+                <textarea id="a_desc" class="hidden" placeholder="Assignment Instructions"></textarea>
+                <button class="btn btn-blue" onclick="createAssessment()">Create Assessment</button>
+            </div>
+
+            <div class="glass-panel">
+                <h3 style="color:#ffb142;">➕ Add Question to Exam/IA</h3>
+                <select id="q_exam"><option value="">Loading Your Exams...</option></select>
+                <textarea id="q_text" placeholder="Type the question here..."></textarea>
+                <div style="display: flex; gap: 10px;"><input type="text" id="q_a" placeholder="Option A"><input type="text" id="q_b" placeholder="Option B"></div>
+                <div style="display: flex; gap: 10px;"><input type="text" id="q_c" placeholder="Option C"><input type="text" id="q_d" placeholder="Option D"></div>
+                <select id="q_ans"><option value="">Correct Answer</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                <button class="btn" style="background:#ffb142; color:#000;" onclick="addQuestion()">Add Question</button>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <h3 style="color: #1dd1a1;">📊 Student Exam Results (Your Group)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Student Name</th><th>Index No.</th><th>Course</th><th>Score</th><th>Grade</th></tr></thead>
+                    <tbody id="tutor-subs"><tr><td colspan="5">Loading results...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let tutor = JSON.parse(sessionStorage.getItem('tutor')); 
+        if(!tutor) window.location.href = 'index.html';
+
+        window.onload = async () => {
+            if(tutor.is_first_login) document.getElementById('passwordModal').classList.add('active');
+            document.getElementById('tutor-title').innerText = `${tutor.name}`;
+            
+            let groupLabel = "Global Tutor";
+            
+            // Check if Global or Assigned Tutor
+            if(!tutor.group_id) {
+                document.getElementById('a_group').classList.remove('hidden');
+                document.getElementById('m_group').classList.remove('hidden');
+                const { data: groups } = await supabaseClient.from('study_groups').select('*').eq('school_id', tutor.school_id);
+                if(groups) groups.forEach(g => {
+                    document.getElementById('a_group').innerHTML += `<option value="${g.id}">🎯 Target: ${g.group_name}</option>`;
+                    document.getElementById('m_group').innerHTML += `<option value="${g.id}">🎯 Target: ${g.group_name}</option>`;
+                });
+            } else {
+                const { data: grp } = await supabaseClient.from('study_groups').select('group_name, access_code').eq('id', tutor.group_id).single();
+                if(grp) groupLabel = `Group: ${grp.group_name} | Code: ${grp.access_code}`;
+            }
+            document.getElementById('tutor-group').innerText = groupLabel;
+            
+            // Load Courses
+            const { data: c } = await supabaseClient.from('courses').select('*').eq('school_id', tutor.school_id);
+            if(c) c.forEach(x => { 
+                document.getElementById('tutor-courses').innerHTML += `<option value="${x.id}">${x.course_code}</option>`; 
+                document.getElementById('a_course').innerHTML += `<option value="${x.id}">${x.course_code}</option>`; 
+            });
+            
+            // Load My Materials, Exams & Announcements
+            const mngList = document.getElementById('tutor-manage-list'); mngList.innerHTML = '';
+            
+            let qQuery = supabaseClient.from('exams').select('id, title, exam_type');
+            if(tutor.group_id) qQuery = qQuery.eq('group_id', tutor.group_id);
+            const { data: exams } = await qQuery;
+            if(exams) exams.forEach(e => { 
+                document.getElementById('q_exam').innerHTML += `<option value="${e.id}">[${e.exam_type}] ${e.title}</option>`; 
+                mngList.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;"><span><strong>[${e.exam_type}]</strong> ${e.title}</span><button class="btn btn-danger" style="width:auto; padding:3px 8px;" onclick="deleteItem('exams', ${e.id})">🗑️</button></div>`;
+            });
+
+            const { data: m } = await supabaseClient.from('materials').select('id, title, courses(course_code)').eq('tutor_id', tutor.id);
+            if(m) m.forEach(x => mngList.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;"><span><strong>[Material]</strong> ${x.courses.course_code} - ${x.title}</span><button class="btn btn-danger" style="width:auto; padding:3px 8px;" onclick="deleteItem('materials', ${x.id})">🗑️</button></div>`);
+
+            const { data: anns } = await supabaseClient.from('announcements').select('*').eq('school_id', tutor.school_id).order('posted_at', { ascending: false });
+            if(anns) anns.forEach(a => mngList.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;"><span><strong>[📢]</strong> ${a.message}</span><button class="btn btn-danger" style="width:auto; padding:3px 8px;" onclick="deleteItem('announcements', ${a.id})">🗑️</button></div>`);
+
+            // Load Student Results
+            const { data: subs } = await supabaseClient.from('submissions').select('*, students(name, index_number, group_id), exams(title, courses(course_code, school_id))');
+            const tbody = document.getElementById('tutor-subs'); tbody.innerHTML = '';
+            let found = false;
+            if(subs) {
+                subs.forEach(s => {
+                    if(s.exams.courses.school_id === tutor.school_id && (!tutor.group_id || s.students.group_id === tutor.group_id)) {
+                        found = true;
+                        tbody.innerHTML += `<tr><td>${s.students.name}</td><td>${s.students.index_number}</td><td>${s.exams.courses.course_code}</td><td>${s.score}/${s.max_score}</td><td><strong style="color:#1dd1a1;">${s.grade}</strong></td></tr>`;
+                    }
+                });
+            }
+            if(!found) tbody.innerHTML = '<tr><td colspan="5">No students in your group have taken exams yet.</td></tr>';
+        };
+
+        // --- TUTOR ACTIONS ---
+        async function updatePassword() { const p = document.getElementById('new_tutor_pass').value; if(p.length < 5) return alert("Password too short."); await supabaseClient.from('tutors').update({ password: p, is_first_login: false }).eq('id', tutor.id); tutor.is_first_login = false; sessionStorage.setItem('tutor', JSON.stringify(tutor)); document.getElementById('passwordModal').classList.remove('active'); }
+        
+        async function uploadMaterial() { 
+            const gTarget = tutor.group_id ? tutor.group_id : (document.getElementById('m_group').value === "GLOBAL" ? null : document.getElementById('m_group').value);
+            await supabaseClient.from('materials').insert([{ course_id: document.getElementById('tutor-courses').value, tutor_id: tutor.id, title: document.getElementById('mat_title').value, file_link: document.getElementById('mat_link').value, group_id: gTarget }]); 
+            alert("Material Uploaded!"); location.reload(); 
+        }
+
+        async function postAnnouncement() { const msg = document.getElementById('ann_text').value.trim(); if(!msg) return; await supabaseClient.from('announcements').insert([{ school_id: tutor.school_id, message: msg }]); alert("Broadcasted!"); location.reload(); }
+        async function deleteItem(table, id) { if(confirm("Permanently delete this?")) { await supabaseClient.from(table).delete().eq('id', id); location.reload(); } }
+        
+        function toggleAssType() { const t = document.getElementById('a_type').value; document.getElementById('a_duration').classList.toggle('hidden', t==='Assignment'); document.getElementById('a_desc').classList.toggle('hidden', t!=='Assignment'); }
+        
+        async function createAssessment() { 
+            if (!tutor.group_id && document.getElementById('a_group').classList.contains('hidden')) return alert("🛑 Access Denied.");
+            const t = document.getElementById('a_type').value; 
+            const daysValid = parseInt(document.getElementById('a_days').value) || 30;
+            let expiryDate = new Date(); expiryDate.setDate(expiryDate.getDate() + daysValid);
+            const gTarget = tutor.group_id ? tutor.group_id : (document.getElementById('a_group').value === "GLOBAL" ? null : document.getElementById('a_group').value);
+            
+            if(t === 'Assignment') { await supabaseClient.from('assignments').insert([{ course_id: document.getElementById('a_course').value, title: document.getElementById('a_title').value, description: document.getElementById('a_desc').value, expires_at: expiryDate.toISOString(), group_id: gTarget }]); } 
+            else { await supabaseClient.from('exams').insert([{ course_id: document.getElementById('a_course').value, title: document.getElementById('a_title').value, duration_minutes: document.getElementById('a_duration').value, exam_type: t, expires_at: expiryDate.toISOString(), group_id: gTarget }]); } 
+            alert(`Assessment Created!`); location.reload(); 
+        }
+        
+        async function addQuestion() { await supabaseClient.from('questions').insert([{ exam_id: document.getElementById('q_exam').value, type: 'mcq', question_text: document.getElementById('q_text').value, option_a: document.getElementById('q_a').value, option_b: document.getElementById('q_b').value, option_c: document.getElementById('q_c').value, option_d: document.getElementById('q_d').value, correct_answer: document.getElementById('q_ans').value }]); alert("Added!"); document.getElementById('q_text').value = ''; }
+    </script>
+</body>
+</html>

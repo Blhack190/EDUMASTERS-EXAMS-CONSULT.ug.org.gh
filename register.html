@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Register</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body>
+    <div class="glass-panel" style="max-width: 500px; margin-top: 5vh;">
+        <h2 style="text-align: center; color: #1dd1a1;">Create Student Account</h2>
+        <form id="regForm" style="margin-top: 20px;">
+            <select id="r_school" onchange="loadGroups()" required><option value="">-- Select Institution --</option></select>
+            
+            <!-- GROUP IS NOW REQUIRED -->
+            <select id="r_group" onchange="checkGroupSecurity()" required><option value="">-- Select Study Group --</option></select>
+            
+            <!-- SECRET ACCESS CODE BOX -->
+            <div id="code_box" class="hidden">
+                <p style="font-size:0.8rem; color:#ffb142; margin-bottom:5px;">🔒 This group requires an Access Code.</p>
+                <input type="text" id="r_group_code" placeholder="Enter Access Code" style="border-color:#ffb142; font-weight:bold; color:#ffb142;">
+            </div>
+            
+            <input type="text" id="r_name" placeholder="Full Name" required>
+            <input type="text" id="r_index" placeholder="Index Number" required>
+            <select id="r_level" required>
+                <option value="">-- Select Academic Level --</option>
+                <option value="Diploma 1">Diploma 1</option>
+                <option value="Diploma 2">Diploma 2</option>
+                <option value="Level 100">Level 100</option>
+                <option value="Level 200">Level 200</option>
+                <option value="Level 300">Level 300</option>
+                <option value="Level 400">Level 400</option>
+            </select>
+            <input type="email" id="r_email" placeholder="Email Address" required>
+            <input type="tel" id="r_phone" placeholder="Phone Number (e.g. 0541234567)" required>
+            <button type="submit" id="regBtn" class="btn btn-blue">Register Now</button>
+        </form>
+        <p style="text-align: center; margin-top: 20px;"><a href="index.html" style="color: #1dd1a1; font-weight: bold;">Already Registered? Login Here</a></p>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let groupSecurityData = {}; 
+
+        window.onload = async () => {
+            const { data } = await supabaseClient.from('schools').select('*');
+            data.forEach(s => document.getElementById('r_school').innerHTML += `<option value="${s.id}">${s.name}</option>`);
+        };
+
+        async function loadGroups() {
+            const school_id = document.getElementById('r_school').value;
+            const groupSelect = document.getElementById('r_group');
+            groupSelect.innerHTML = '<option value="">-- Select Study Group --</option>';
+            document.getElementById('code_box').classList.add('hidden'); 
+            groupSecurityData = {}; 
+            
+            if(school_id) {
+                const { data } = await supabaseClient.from('study_groups').select('*').eq('school_id', school_id);
+                if(data) data.forEach(g => {
+                    groupSelect.innerHTML += `<option value="${g.id}">${g.group_name}</option>`;
+                    groupSecurityData[g.id] = g.requires_code; 
+                });
+            }
+        }
+
+        function checkGroupSecurity() {
+            const groupId = document.getElementById('r_group').value;
+            const codeBox = document.getElementById('code_box');
+            const codeInput = document.getElementById('r_group_code');
+            
+            if (groupId && groupSecurityData[groupId] === true) { 
+                codeBox.classList.remove('hidden'); codeInput.required = true; 
+            } else { 
+                codeBox.classList.add('hidden'); codeInput.required = false; codeInput.value = ''; 
+            }
+        }
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('regBtn'); btn.innerText = "Verifying & Registering..."; btn.disabled = true;
+
+            const selectedGroupId = document.getElementById('r_group').value;
+            
+            // STRICT CHECK: Ensure Group is Selected
+            if (!selectedGroupId) {
+                alert("You must select a Study Group to register!");
+                btn.innerText = "Register Now"; btn.disabled = false; return;
+            }
+
+            let isVerified = false; 
+
+            if (groupSecurityData[selectedGroupId] === true) {
+                const enteredCode = document.getElementById('r_group_code').value.trim().toUpperCase();
+                const { data: groupData } = await supabaseClient.from('study_groups').select('access_code').eq('id', selectedGroupId).single();
+                if (!groupData || groupData.access_code !== enteredCode) {
+                    alert("🛑 Invalid Access Code! Ask your Tutor/Admin for the correct code.");
+                    btn.innerText = "Register Now"; btn.disabled = false; return; 
+                }
+                isVerified = true; 
+            } else {
+                isVerified = true; 
+            }
+
+            const { error } = await supabaseClient.from('students').insert([{ 
+                school_id: document.getElementById('r_school').value, 
+                group_id: selectedGroupId, 
+                verified_group: isVerified, 
+                name: document.getElementById('r_name').value, 
+                index_number: document.getElementById('r_index').value, 
+                academic_level: document.getElementById('r_level').value, 
+                email: document.getElementById('r_email').value, 
+                phone_number: document.getElementById('r_phone').value 
+            }]);
+            
+            if (error) { 
+                alert("Failed: Email or Index might already exist."); btn.innerText = "Register Now"; btn.disabled = false;
+            } else { 
+                alert("Success! You can now log in."); window.location.href = "index.html"; 
+            }
+        });
+    </script>
+</body>
+</html>
