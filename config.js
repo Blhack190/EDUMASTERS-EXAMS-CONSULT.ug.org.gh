@@ -1,25 +1,64 @@
 // =========================================================
-// 🚧 MASTER MAINTENANCE MODE SWITCH 🚧
+// 🚧 MASTER MAINTENANCE MODE SWITCH & SMART TIMER 🚧
 // =========================================================
-const MAINTENANCE_MODE = false; // Set to true to lock the site!
-const MAINTENANCE_END_TIME = "2024-03-01T18:30:00"; // Set your estimated finish time
+const MAINTENANCE_MODE = false; // Change to 'true' to lock the entire website!
+
+// Set the exact Date and Time the upgrade will finish (e.g., "2024-03-01T15:00:00")
+// Format is: YYYY-MM-DDTHH:MM:SS. Leave it as "" if you don't want a timer.
+const MAINTENANCE_END_TIME = "2026-03-20T20:30:00"; 
 
 if (MAINTENANCE_MODE) {
-    // IF MAINTENANCE IS ON, ONLY SHOW THIS SCREEN
     document.addEventListener("DOMContentLoaded", () => {
+        // 1. Lock the screen and inject the Maintenance UI
         document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:linear-gradient(135deg, #0f2027, #203a43, #2c5364); color:#fff; text-align:center; font-family:'Poppins', sans-serif; padding: 20px; z-index: 999999; position: fixed; top: 0; left: 0; width: 100%;">
                 <h1 style="color:#ffb142; font-size: 3.5rem; margin-bottom: 10px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">🚧 SYSTEM UPGRADE 🚧</h1>
                 <p style="font-size: 1.2rem; max-width: 600px; line-height: 1.6; margin-bottom: 20px;">The EduMasters platform is currently undergoing scheduled maintenance to bring you new features and better security.</p>
+                
+                <!-- TIMER BOX (Hidden by default unless a time is set) -->
+                <div id="maint-timer-box" style="display:none; background: rgba(0,0,0,0.5); padding: 20px 40px; border-radius: 15px; border: 2px solid #1dd1a1; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <h3 style="color:#1dd1a1; margin-bottom: 10px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem;">Estimated Time Remaining</h3>
+                    <div id="maint-timer" style="font-size: 2.5rem; font-weight: bold; font-family: monospace; color: #fff;">00:00:00</div>
+                </div>
+
                 <h3 style="color:#ff6b6b; margin-bottom: 20px;">Please check back soon!</h3>
                 <p style="margin-top: 20px; color:#1dd1a1; font-weight:bold; letter-spacing: 1px;">Powered by Quist Technologies</p>
             </div>
         `;
+
+        // 2. Start the Countdown Logic if an end time is provided
+        if(MAINTENANCE_END_TIME !== "") {
+            document.getElementById('maint-timer-box').style.display = 'block';
+            const targetDate = new Date(MAINTENANCE_END_TIME).getTime();
+
+            const mTimer = setInterval(() => {
+                const now = new Date().getTime(); // Gets the student's exact system time
+                const distance = targetDate - now;
+
+                if(distance < 0) {
+                    clearInterval(mTimer);
+                    document.getElementById('maint-timer').innerText = "SYSTEM REBOOTING...";
+                    document.getElementById('maint-timer').style.color = "#ffb142";
+                    
+                    // Auto-refresh the page when time is up. 
+                    // If you (Admin) changed MAINTENANCE_MODE to false, they will instantly get back in!
+                    setTimeout(() => location.reload(), 3000); 
+                } else {
+                    const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    // Format to show 03h : 05m : 09s
+                    document.getElementById('maint-timer').innerText = 
+                        (h < 10 ? "0"+h : h) + "h : " + 
+                        (m < 10 ? "0"+m : m) + "m : " + 
+                        (s < 10 ? "0"+s : s) + "s";
+                }
+            }, 1000);
+        }
     });
-} else {
-    // =========================================================
-    // ✅ IF MAINTENANCE IS FALSE, LOAD THE NORMAL WEBSITE
-    // =========================================================
+}
+// =========================================================
 
 const SUPABASE_URL = "https://mhhltddsfzfpixdupblq.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1oaGx0ZGRzZnpmcGl4ZHVwYmxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODEzMjEsImV4cCI6MjA4NzQ1NzMyMX0.eB2FM0yaTUCFdyug3FLug6GRI0H_uQhBa8-DWSCdh6c"; 
@@ -197,11 +236,4 @@ function botFinalize(type) {
                 alert("Dashboard Cleared! Results moved to Emergency Archive.");
                 location.reload();
             }
-
         }
-
-
-
-
-
-
