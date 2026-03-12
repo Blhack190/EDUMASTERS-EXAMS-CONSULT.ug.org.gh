@@ -1,7 +1,7 @@
 // =========================================================
 // 🚧 MASTER MAINTENANCE MODE SWITCH 🚧
 // =========================================================
-const MAINTENANCE_MODE = true; // Set to true to lock the site!
+const MAINTENANCE_MODE = false; // Set to true to lock the site!
 const MAINTENANCE_END_TIME = "2024-03-01T18:30:00"; // Set your estimated finish time
 
 if (MAINTENANCE_MODE) {
@@ -199,6 +199,7 @@ function botFinalize(type) {
             }
 
         }
+
 
 
 
