@@ -1,7 +1,7 @@
 // =========================================================
 // 🚧 MASTER MAINTENANCE MODE SWITCH & SMART TIMER 🚧
 // =========================================================
-const MAINTENANCE_MODE = false; // Change to 'true' to lock the entire website!
+const MAINTENANCE_MODE = true; // Change to 'true' to lock the entire website!
 
 // Set the exact Date and Time the upgrade will finish (e.g., "2024-03-01T15:00:00")
 // Format is: YYYY-MM-DDTHH:MM:SS. Leave it as "" if you don't want a timer.
@@ -238,4 +238,5 @@ function botFinalize(type) {
             }
 
         }
+
 
