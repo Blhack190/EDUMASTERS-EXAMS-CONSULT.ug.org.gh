@@ -7,9 +7,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // DISABLE BACK BUTTON
+        // 🛑 STRICT ANTI-CHEATING: DISABLE BACK BUTTON
         history.pushState(null, null, location.href);
         window.onpopstate = function () { history.go(1); };
+        
+        // 🛑 WARN ON REFRESH
+        window.onbeforeunload = function() {
+            return "If you reload this page, your progress will be lost and your exam may auto-submit. Are you sure?";
+        };
     </script>
 </head>
 <body style="display:flex; justify-content:center; align-items:center; background: #0f2027;">
@@ -17,7 +22,7 @@
     <!-- 🚨 ANTI-SCREENSHOT SECURITY BLANKET 🚨 -->
     <div id="security-blanket" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99999; color:#ff6b6b; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px;">
         <h1 style="font-size: 3rem;">🚨 SECURITY LOCKDOWN 🚨</h1>
-        <p style="font-size: 1.2rem; color: #fff; margin-top:10px;">Screen capturing or leaving the exam window is strictly prohibited.<br>Your exam is being automatically submitted.</p>
+        <p style="font-size: 1.2rem; color: #fff; margin-top:10px;">Screen capturing, split-screening, or leaving the exam window is strictly prohibited.<br>Your exam is being automatically submitted.</p>
     </div>
 
     <!-- 📷 LIVE WEBCAM PROCTORING -->
@@ -25,7 +30,7 @@
         <video id="student-cam" autoplay playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
     </div>
 
-    <!-- EXAM UI -->
+    <!-- EXAM UI (Hidden until Camera is allowed) -->
     <div class="glass-panel" id="exam-ui" style="width: 100%; max-width: 800px; z-index: 100; display: none;">
         <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; margin-bottom: 20px;">
             <h3 id="q-counter" style="color: #ccc;">Initializing...</h3>
@@ -36,9 +41,12 @@
         <button id="next-btn" class="btn hidden" style="margin-top: 25px; font-size: 1.1rem; padding: 15px;">Next Question</button>
     </div>
 
-    <div id="camera-warning" style="text-align: center; color: #fff;">
-        <h2>📷 Requesting Camera Access...</h2>
-        <p>This exam is proctored. You must allow camera access to begin.</p>
+    <!-- PRE-EXAM CAMERA WARNING -->
+    <div id="camera-warning" class="glass-panel" style="max-width: 500px; text-align: center;">
+        <h2 style="color: #ffb142; margin-bottom: 10px;">📷 Camera Access Required</h2>
+        <p style="margin-bottom: 20px; font-size: 0.9rem; color: #ccc;">This is a strictly proctored exam. You must allow camera access to prove your identity. The timer will not start until you grant access.</p>
+        <button class="btn btn-blue" id="start-cam-btn" onclick="requestCamera()">Grant Access & Start Exam</button>
+        <button class="btn btn-danger" style="margin-top: 10px;" onclick="window.location.href='student.html'">Cancel & Return</button>
     </div>
 
     <script src="config.js"></script>
@@ -47,21 +55,16 @@
         
         let examSubmitted = false;
 
-        // 🚨 SCREENSHOT & TAB-SWITCH DETECTOR 🚨
-        // When the window loses focus (like pulling down the menu to screenshot, or switching tabs), it blacks out the screen and submits!
-        window.addEventListener('blur', forceSubmitSecurity);
-        document.addEventListener('visibilitychange', () => { if(document.hidden) forceSubmitSecurity(); });
-
+        // 🚨 SCREENSHOT DETECTOR (Triggered ONLY after exam starts)
         function forceSubmitSecurity() {
             if(examSubmitted) return;
             examSubmitted = true;
-            document.getElementById('security-blanket').style.display = 'flex'; // Turn screen PITCH BLACK
+            document.getElementById('security-blanket').style.display = 'flex'; 
             
-            // Stop the camera
             const stream = document.getElementById('student-cam').srcObject;
             if(stream) stream.getTracks().forEach(track => track.stop());
 
-            setTimeout(() => { submitExam(); }, 2000); // Give it 2 seconds to show the warning, then submit
+            setTimeout(() => { submitExam(); }, 2000); 
         }
 
         const student = JSON.parse(sessionStorage.getItem('student'));
@@ -72,24 +75,39 @@
         let timerInterval;
         
         window.onload = async () => {
-            // 1. CHECK IF ALREADY TAKEN
             const { data: subCheck } = await supabaseClient.from('submissions').select('id').eq('exam_id', activeExam.id).eq('student_id', student.id).single();
             if(subCheck) { alert("Exam already completed."); window.location.href = 'student.html'; return; }
+        };
 
-            // 2. REQUEST CAMERA PERMISSION (PROCTORING)
+        // REQUEST CAMERA TRIGGERED BY BUTTON CLICK
+        async function requestCamera() {
+            const btn = document.getElementById('start-cam-btn');
+            btn.innerText = "Requesting... Please click 'Allow' on your browser pop-up";
+            btn.disabled = true;
+
             try {
+                // Ask for camera
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 document.getElementById('student-cam').srcObject = stream;
+                
+                // Show UI
                 document.getElementById('webcam-container').style.display = 'block';
                 document.getElementById('camera-warning').style.display = 'none';
                 document.getElementById('exam-ui').style.display = 'block';
                 
-                startExamLogic(); // Camera approved, start exam!
+                // 🛑 ONLY turn on Anti-Cheat AFTER they have safely clicked Allow!
+                window.addEventListener('blur', forceSubmitSecurity);
+                document.addEventListener('visibilitychange', () => { if(document.hidden) forceSubmitSecurity(); });
+
+                // Start the Exam
+                startExamLogic(); 
             } catch (err) {
-                alert("🛑 Camera access denied. You cannot take this secure exam without video proctoring.");
-                window.location.href = 'student.html';
+                console.error(err);
+                alert("🛑 Camera access denied OR no camera detected. Please check your browser permissions and try again.");
+                btn.innerText = "Grant Access & Start Exam";
+                btn.disabled = false;
             }
-        };
+        }
 
         async function startExamLogic() {
             const { data } = await supabaseClient.from('questions').select('*').eq('exam_id', activeExam.id);
@@ -136,7 +154,7 @@
         }
 
         async function submitExam() {
-            window.onblur = null; // Remove security listeners so it doesn't loop
+            window.onblur = null; 
             document.removeEventListener('visibilitychange', forceSubmitSecurity);
             
             document.body.innerHTML = `<div style="text-align:center; margin-top:40vh;"><h1 style="color:#1dd1a1;">Grading Submission...</h1><p style="color:#fff;">Please wait...</p></div>`;
@@ -148,7 +166,6 @@
                 grade: ugGrading.grade, gpa_points: ugGrading.points 
             }]);
 
-            // Turn off camera light
             const stream = document.getElementById('student-cam').srcObject;
             if(stream) stream.getTracks().forEach(track => track.stop());
 
