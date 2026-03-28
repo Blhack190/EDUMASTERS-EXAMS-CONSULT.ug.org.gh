@@ -2,7 +2,7 @@
 // 🚧 MASTER MAINTENANCE MODE (WITH BOT & SURVEY) 🚧
 // =========================================================
 const MAINTENANCE_MODE = true; // Change to 'true' to lock the website
-const MAINTENANCE_END_TIME = "2026-03-28T09:00:00Z"; // Leave blank or put a date like "2026-03-27T20:30:00Z"
+const MAINTENANCE_END_TIME = "2026-03-28T12:00:00Z"; // Leave blank or put a date like "2026-03-27T20:30:00Z"
 
 // 1. SUPABASE & PAYSTACK KEYS
 const SUPABASE_URL = "https://mhhltddsfzfpixdupblq.supabase.co"; 
